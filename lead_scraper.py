@@ -77,8 +77,7 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 DEEPSEEK_API_URL = os.environ.get("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash")
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 MAX_ITEMS_PER_RUN = int(os.environ.get("MAX_ITEMS_PER_RUN", 500))
 SHOW_HN_LOOKBACK_HOURS = int(os.environ.get("SHOW_HN_LOOKBACK_HOURS", 6))
@@ -302,31 +301,31 @@ def upload_state_to_b2(state: dict):
     logger.info("Uploaded %d bytes to b2://%s/%s", len(body), B2_BUCKET_NAME, B2_OBJECT_KEY)
 
 
-# --- Telegram: one batched message per run, not one per lead ---
-def send_telegram_summary(new_leads: list):
+# --- Discord: one batched message per run, not one per lead ---
+def send_discord_summary(new_leads: list):
     if not new_leads:
         return
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        logger.warning("Telegram not configured — skipping notification for %d leads.", len(new_leads))
+    if not DISCORD_WEBHOOK_URL:
+        logger.warning("Discord not configured — skipping notification for %d leads.", len(new_leads))
         return
 
-    lines = [f"🎯 {len(new_leads)} new HN lead(s):\n"]
-    for lead in new_leads[:20]:  # Telegram has a 4096-char message cap
+    lines = [f"🎯 **{len(new_leads)} new HN lead(s):**\n"]
+    for lead in new_leads[:15]:  # Discord has a 2000-char message cap
         lines.append(
-            f"• [{lead['score']}/10] {lead['source']} — {lead.get('author', '?')}\n"
-            f"  {lead['reasoning']}\n"
-            f"  {lead['url']}"
+            f"• [{lead['score']}/10] **{lead['source']}** — {lead.get('author', '?')}\n"
+            f"  *{lead['reasoning']}*\n"
+            f"  <{lead['url']}>"
         )
     text = "\n".join(lines)
-    if len(new_leads) > 20:
-        text += f"\n\n...and {len(new_leads) - 20} more (see leads_pipeline.json)."
+    if len(new_leads) > 15:
+        text += f"\n\n...and {len(new_leads) - 15} more (see leads_pipeline.json)."
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     try:
-        resp = _session.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text}, timeout=15)
+        # truncate just in case to fit discord's hard limit
+        resp = _session.post(DISCORD_WEBHOOK_URL, json={"content": text[:2000]}, timeout=15)
         resp.raise_for_status()
     except requests.RequestException as e:
-        logger.error("Telegram notification failed: %s", e)
+        logger.error("Discord notification failed: %s", e)
 
 
 # --- Day-of-month self-throttle ---
@@ -512,7 +511,7 @@ def main():
         leads.sort(key=lambda l: l.get("score", 0), reverse=True)
 
     upload_state_to_b2({"leads": leads, "seen_ids": sorted(seen_ids)})
-    send_telegram_summary(new_leads)
+    send_discord_summary(new_leads)
 
     logger.info(
         "Run complete. %d new leads this run. %d total leads on file.",
