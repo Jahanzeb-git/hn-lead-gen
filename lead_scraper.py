@@ -74,7 +74,7 @@ B2_BUCKET_NAME = os.environ.get("B2_BUCKET_NAME", "hnscraper")
 B2_OBJECT_KEY = os.environ.get("B2_OBJECT_KEY", "leads_pipeline.json")
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
-DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+DEEPSEEK_API_URL = os.environ.get("DEEPSEEK_API_URL", "https://api.deepseek.com/chat/completions")
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash")
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")

@@ -27,7 +27,8 @@ jobs:
       - name: Run Lead Agent
         env:
           DEEPSEEK_API_KEY:        ${{ secrets.DEEPSEEK_API_KEY }}
-          DEEPSEEK_MODEL:          "deepseek-v4-flash"
+          DEEPSEEK_API_URL:        "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+          DEEPSEEK_MODEL:          "deepseek-v4-pro-0813"
           TELEGRAM_BOT_TOKEN:      ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:        ${{ secrets.TELEGRAM_CHAT_ID }}
           B2_KEY_ID:               ${{ secrets.B2_KEY_ID }}
