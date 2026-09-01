@@ -245,7 +245,7 @@ def score_candidates_with_llm(candidates: list) -> dict:
         DEEPSEEK_API_URL,
         headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
         json=body,
-        timeout=120,
+        timeout=500,
     )
     resp.raise_for_status()
     raw = resp.json()["choices"][0]["message"]["content"].strip()
