@@ -1,6 +1,7 @@
 name: HN Lead Agent V2
 
 on:
+  push:
   schedule:
     - cron: '*/15 * * * *'  # Fires every 15 min all month; lead_scraper.py's
                              # should_run_this_tick() decides whether a given
