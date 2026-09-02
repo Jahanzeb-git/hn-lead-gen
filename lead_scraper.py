@@ -259,6 +259,8 @@ or AI component (-2)
 - Traditional enterprise/corp role (banking, compliance, non-tech) (-3) (even if non tech if there is oppurtunity - your call & judgement)
 - Posted by a staffing agency or recruiter middleman, not a direct company (-1)
 
+- NOTE: Jahanzeb is open to work with entry level or junior or mid-level+ (if you think he can justify) roles but based on your judgement you decide. He would work on his very first remote job so use judgement here.
+
 ## Output Format
 Return ONLY a JSON object. Do not include any prose, markdown fences, or \
 explanation outside the JSON. The format must be exactly:
