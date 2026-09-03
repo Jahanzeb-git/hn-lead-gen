@@ -396,29 +396,28 @@ def send_discord_summary(new_leads: list):
 # (cheap) if should_run_this_tick says no and we exit before any LLM call.
 
 def should_run_this_tick(now: datetime.datetime = None) -> bool:
-    # Always execute fully if triggered manually via GitHub Actions
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
         return True
 
     now = now or datetime.datetime.now(datetime.timezone.utc)
     day, hour, minute = now.day, now.hour, now.minute
 
-    # Tapering schedule based on HN traffic patterns
+    # Production fix: GitHub Actions runners are frequently delayed by 5-25 minutes.
+    # A wide 30-minute window (minute < 30) absorbs these queue delays to guarantee execution. 
+    # Duplicate runs in this window cost nothing because 'seen_ids' prevents redundant LLM calls.
     if day <= 2:
-        return True  # Days 1-2: Every cron tick (peak arrival)
+        return True
     
     if day == 3:
-        return minute == 0 and hour % 2 == 0  # Day 3: Every 2 hours
+        return hour % 2 == 0 and minute < 30
         
     if day == 4:
-        return minute == 0 and hour % 3 == 0  # Day 4: Every 3 hours
+        return hour % 3 == 0 and minute < 30
         
     if 5 <= day <= 10:
-        return minute == 0 and hour % 4 == 0  # Days 5-10: Every 4 hours
+        return hour % 4 == 0 and minute < 30
         
-    # Days 11+: Long tail of the month
-    return minute == 0 and hour % 6 == 0      # Every 6 hours
-
+    return hour % 6 == 0 and minute < 30
 
 # --- Candidate gathering per thread type ---
 def gather_hiring_candidates(seen_ids: set) -> list:
