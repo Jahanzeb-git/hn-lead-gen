@@ -394,17 +394,30 @@ def send_discord_summary(new_leads: list):
 # land in the first 48h, so day 1-2 get full 15-min granularity; later
 # days taper off since a wasted tick only costs ~1 Algolia search call
 # (cheap) if should_run_this_tick says no and we exit before any LLM call.
-def should_run_this_tick(now: datetime.datetime = None) -> bool:
-    now = now or datetime.datetime.now(datetime.timezone.utc)
-    day, minute = now.day, now.minute
 
+def should_run_this_tick(now: datetime.datetime = None) -> bool:
+    # Always execute fully if triggered manually via GitHub Actions
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        return True
+
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    day, hour, minute = now.day, now.hour, now.minute
+
+    # Tapering schedule based on HN traffic patterns
     if day <= 2:
-        return True  # every 15-min tick does work — peak arrival window
-    if 3 <= day <= 5:
-        return minute == 0  # hourly
-    if 6 <= day <= 14:
-        return minute == 0 and now.hour % 3 == 0  # every 3 hours
-    return minute == 0 and now.hour % 6 == 0  # every 6 hours, long tail
+        return True  # Days 1-2: Every cron tick (peak arrival)
+    
+    if day == 3:
+        return minute == 0 and hour % 2 == 0  # Day 3: Every 2 hours
+        
+    if day == 4:
+        return minute == 0 and hour % 3 == 0  # Day 4: Every 3 hours
+        
+    if 5 <= day <= 10:
+        return minute == 0 and hour % 4 == 0  # Days 5-10: Every 4 hours
+        
+    # Days 11+: Long tail of the month
+    return minute == 0 and hour % 6 == 0      # Every 6 hours
 
 
 # --- Candidate gathering per thread type ---
