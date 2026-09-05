@@ -1,0 +1,39 @@
+name: Arbitrage Lead Agent
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # Every 6 hours — Remotive/Jobicy don't update
+                              # faster than this so running more often wastes
+                              # LLM credits on duplicate listings.
+  workflow_dispatch:          # Manual trigger from GitHub UI for testing
+
+jobs:
+  arbitrage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet boto3 requests
+
+      - name: Run Arbitrage Agent
+        env:
+          DEEPSEEK_API_KEY:       ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_API_URL:       "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+          DEEPSEEK_MODEL:         "deepseek-v4-pro-0813"
+          DISCORD_WEBHOOK_URL:    ${{ secrets.DISCORD_WEBHOOK_URL }}
+          B2_KEY_ID:              ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY:     ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME:         ${{ secrets.B2_BUCKET_NAME }}
+          B2_ENDPOINT:            ${{ secrets.B2_ENDPOINT }}
+          ARBITRAGE_OBJECT_KEY:   "arbitrage_pipeline.json"
+          MIN_QUALIFY_SCORE:      "6"
+        run: python arbitrage_scraper.py
