@@ -259,6 +259,8 @@ or AI component (-2)
 - Traditional enterprise/corp role (banking, compliance, non-tech) (-3) (even if non tech if there is oppurtunity - your call & judgement)
 - Posted by a staffing agency or recruiter middleman, not a direct company (-1)
 
+- NOTE: Jahanzeb is open to work with entry level or junior or mid-level+ (if you think he can justify) roles but based on your judgement you decide. He would work on his very first remote job so use judgement here.
+
 ## Output Format
 Return ONLY a JSON object. Do not include any prose, markdown fences, or \
 explanation outside the JSON. The format must be exactly:
@@ -392,18 +394,30 @@ def send_discord_summary(new_leads: list):
 # land in the first 48h, so day 1-2 get full 15-min granularity; later
 # days taper off since a wasted tick only costs ~1 Algolia search call
 # (cheap) if should_run_this_tick says no and we exit before any LLM call.
+
 def should_run_this_tick(now: datetime.datetime = None) -> bool:
+    if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        return True
+
     now = now or datetime.datetime.now(datetime.timezone.utc)
-    day, minute = now.day, now.minute
+    day, hour, minute = now.day, now.hour, now.minute
 
+    # Production fix: GitHub Actions runners are frequently delayed by 5-25 minutes.
+    # A wide 30-minute window (minute < 30) absorbs these queue delays to guarantee execution. 
+    # Duplicate runs in this window cost nothing because 'seen_ids' prevents redundant LLM calls.
     if day <= 2:
-        return True  # every 15-min tick does work — peak arrival window
-    if 3 <= day <= 5:
-        return minute == 0  # hourly
-    if 6 <= day <= 14:
-        return minute == 0 and now.hour % 3 == 0  # every 3 hours
-    return minute == 0 and now.hour % 6 == 0  # every 6 hours, long tail
-
+        return True
+    
+    if day == 3:
+        return hour % 2 == 0 and minute < 30
+        
+    if day == 4:
+        return hour % 3 == 0 and minute < 30
+        
+    if 5 <= day <= 10:
+        return hour % 4 == 0 and minute < 30
+        
+    return hour % 6 == 0 and minute < 30
 
 # --- Candidate gathering per thread type ---
 def gather_hiring_candidates(seen_ids: set) -> list:
