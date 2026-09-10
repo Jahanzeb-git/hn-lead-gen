@@ -1,0 +1,33 @@
+name: YC Proactive Targets
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # Run once a day at midnight UTC
+  workflow_dispatch:      # Manual trigger from GitHub UI for testing
+
+jobs:
+  proactive_hunter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet boto3 requests
+
+      - name: Run YC Target Agent
+        env:
+          DISCORD_WEBHOOK_URL:    ${{ secrets.DISCORD_WEBHOOK_URL }}
+          B2_KEY_ID:              ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY:     ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME:         ${{ secrets.B2_BUCKET_NAME }}
+          B2_ENDPOINT:            ${{ secrets.B2_ENDPOINT }}
+          YC_STATE_OBJECT_KEY:    "yc_targets_state.json"
+        run: python yc_proactive_targets.py
