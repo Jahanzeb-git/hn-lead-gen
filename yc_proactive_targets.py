@@ -78,17 +78,28 @@ def is_open_source(company: dict) -> bool:
 # ── YC Fetching & Filtering ──────────────────────────────────────────────────
 def fetch_yc_companies() -> list:
     url = "https://api.ycombinator.com/v0.1/companies"
+    companies = []
     try:
         logger.info("Fetching companies from YC API...")
-        resp = _session.get(url, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
-        companies = data.get("companies", [])
-        logger.info("Fetched %d companies in total.", len(companies))
+        page = 1
+        while True:
+            resp = _session.get(url, params={"tags": "Open Source", "page": page}, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            batch = data.get("companies", [])
+            companies.extend(batch)
+            
+            total_pages = data.get("totalPages", 1)
+            if page >= total_pages:
+                break
+            page += 1
+            time.sleep(0.2) # Be nice to the API
+            
+        logger.info("Fetched %d companies in total across %d pages.", len(companies), page)
         return companies
     except Exception as e:
         logger.error("Failed to fetch YC companies: %s", e)
-        return []
+        return companies
 
 def filter_companies(companies: list, seen_ids: set) -> list:
     targets = []
