@@ -1,0 +1,33 @@
+name: Algora Bounty Agent
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'   # Every 3 hours — bounties move fast, freshness matters
+  workflow_dispatch:          # Manual trigger from GitHub UI
+
+jobs:
+  bounties:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet boto3 requests
+
+      - name: Run Algora Bounty Agent
+        env:
+          DISCORD_WEBHOOK_URL:  ${{ secrets.DISCORD_WEBHOOK_URL }}
+          B2_KEY_ID:            ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY:   ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME:       ${{ secrets.B2_BUCKET_NAME }}
+          B2_ENDPOINT:          ${{ secrets.B2_ENDPOINT }}
+          MIN_BOUNTY_USD:       "75"
+        run: python algora_scraper.py
