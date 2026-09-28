@@ -1,0 +1,46 @@
+name: Startup Radar Agent
+
+on:
+  schedule:
+    - cron: '0 8 * * 0'   # Every Sunday at 08:00 UTC — Techstars/AI Grant/Surge
+                           # cohorts move on their own accelerator calendars,
+                           # not daily, and B2 dedup makes a no-op run cheap.
+  workflow_dispatch:       # Manual trigger from GitHub UI for testing
+    inputs:
+      dry_run:
+        description: 'Score and print leads without writing to B2 or Discord'
+        required: false
+        default: 'false'
+
+jobs:
+  startup_radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet boto3 requests beautifulsoup4
+
+      - name: Run Startup Radar Agent
+        env:
+          DEEPSEEK_API_KEY:        ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_API_URL:        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+          DEEPSEEK_MODEL:          "deepseek-v4-pro-0813"
+          DISCORD_WEBHOOK_URL:     ${{ secrets.DISCORD_WEBHOOK_URL }}
+          B2_KEY_ID:               ${{ secrets.B2_KEY_ID }}
+          B2_APPLICATION_KEY:      ${{ secrets.B2_APPLICATION_KEY }}
+          B2_BUCKET_NAME:          ${{ secrets.B2_BUCKET_NAME }}
+          B2_ENDPOINT:             ${{ secrets.B2_ENDPOINT }}
+          STARTUP_RADAR_OBJECT_KEY: "startup_radar_state.json"
+          MIN_QUALIFY_SCORE:       "7"
+          GITHUB_TOKEN:            ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN:                 ${{ github.event.inputs.dry_run || 'false' }}
+        run: python startup_radar.py
