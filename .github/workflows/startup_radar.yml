@@ -2,13 +2,15 @@ name: Startup Radar Agent
 
 on:
   schedule:
-    - cron: '0 8 * * 0'   # Every Sunday at 08:00 UTC — Techstars/AI Grant/Surge
-                           # cohorts move on their own accelerator calendars,
-                           # not daily, and B2 dedup makes a no-op run cheap.
-  workflow_dispatch:       # Manual trigger from GitHub UI for testing
+    - cron: '0 8 * * 0'   # Every Sunday at 08:00 UTC
+  workflow_dispatch:
     inputs:
       dry_run:
         description: 'Score and print leads without writing to B2 or Discord'
+        required: false
+        default: 'false'
+      dump_candidates:
+        description: 'Save pre-filtered candidates to JSON and exit BEFORE LLM (for manual scoring in Claude.ai)'
         required: false
         default: 'false'
 
@@ -43,4 +45,14 @@ jobs:
           MIN_QUALIFY_SCORE:       "7"
           GITHUB_TOKEN:            ${{ secrets.GITHUB_TOKEN }}
           DRY_RUN:                 ${{ github.event.inputs.dry_run || 'false' }}
+          DUMP_CANDIDATES:         ${{ github.event.inputs.dump_candidates || 'false' }}
+          CANDIDATES_DUMP_PATH:    "candidates_dump.json"
         run: python startup_radar.py
+
+      - name: Upload candidates dump as artifact
+        if: ${{ github.event.inputs.dump_candidates == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidates-dump
+          path: candidates_dump.json
+          retention-days: 7

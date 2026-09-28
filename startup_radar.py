@@ -81,6 +81,10 @@ MIN_QUALIFY_SCORE = int(os.environ.get("MIN_QUALIFY_SCORE", 7))
 MAX_SCORE_PER_RUN = int(os.environ.get("MAX_SCORE_PER_RUN", 100))
 LLM_BATCH_SIZE = int(os.environ.get("LLM_BATCH_SIZE", 6))
 DRY_RUN = os.environ.get("DRY_RUN", "").strip().lower() in ("1", "true", "yes")
+# DUMP_CANDIDATES=1 — save pre-filtered candidates to candidates_dump.json and
+# exit BEFORE any LLM call. Use this to manually score in Claude.ai / ChatGPT.
+DUMP_CANDIDATES = os.environ.get("DUMP_CANDIDATES", "").strip().lower() in ("1", "true", "yes")
+CANDIDATES_DUMP_PATH = os.environ.get("CANDIDATES_DUMP_PATH", "candidates_dump.json")
 
 MAX_FUNDING_USD_M = 5.0   # above this they can afford (and will hire) $300k engineers
 MAX_TEAM_SIZE = 20
@@ -1054,8 +1058,26 @@ def main():
     candidates = prefilter(collect_candidates(seen_ids))
     if not candidates:
         logger.info("No new candidates after filtering.")
-        if not DRY_RUN:
+        if not DRY_RUN and not DUMP_CANDIDATES:
             upload_state({"leads": leads, "seen_ids": sorted(seen_ids)})
+        return
+
+    if DUMP_CANDIDATES:
+        # Save raw pre-filtered candidates for manual LLM scoring (e.g. Claude.ai).
+        # The file contains the exact payload each candidate would send to the LLM,
+        # plus the system prompt printed to stdout so you can copy-paste it.
+        dump = {"candidates": [_llm_payload(c) for c in candidates]}
+        with open(CANDIDATES_DUMP_PATH, "w", encoding="utf-8") as f:
+            json.dump(dump, f, indent=2)
+        logger.info(
+            "DUMP_CANDIDATES: %d candidates written to %s — exiting before LLM.",
+            len(candidates), CANDIDATES_DUMP_PATH,
+        )
+        print("\n" + "=" * 70)
+        print("SYSTEM PROMPT (copy this into Claude.ai / ChatGPT):")
+        print("=" * 70)
+        print(_SYSTEM_PROMPT)
+        print("=" * 70 + "\n")
         return
 
     try:
